@@ -1,0 +1,41 @@
+name: Bug 报告
+description: 报告可复现的问题；安全漏洞请通过 SECURITY.md 中的私密渠道报告。
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢帮助改进 Flowdeck。请先搜索已有 Issue。
+        不要上传 Token、API Key、Secret、Cookie、私有源码、手机号或完整 .env。
+        安全漏洞请阅读仓库根目录的 SECURITY.md，通过私密渠道报告。
+  - type: textarea
+    id: environment
+    attributes:
+      label: 版本与运行环境
+      description: 提交号或版本、系统、部署方式（本地 / Compose）、数据库类型及相关工具版本。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 使用最小、已脱敏的示例说明如何触发。
+      placeholder: |
+        1. 启动……
+        2. 打开……
+        3. 执行……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果与脱敏日志
+      description: 可附脱敏截图、错误信息，以及 /api/health 的结果。
+    validations:
+      required: true

@@ -1,0 +1,17 @@
+projects:
+  - repo: your-company/android-app
+    name: Android App
+    description: Android 客户端与版本发布
+    base_branches: [main]
+    priority_labels: {紧急: 紧急, 普通: 普通, 较低: 较低, P0: 紧急, P1: 普通, P2: 普通, P3: 较低}
+    managers: [] # 钉钉通知人手机号，不含国家码，可空
+    required_checks: [Android CI, Unit tests]
+    review_enabled: false
+    merge_enabled: false
+    release_enabled: false
+    merge_method: squash
+    previous_tag: "" # Required for a first release without a prior published release.
+    agent_id: "" # Optional Agent ID configured in Web Admin (Integrations -> Agent Connections)
+    review_rules: >-
+      阅读相关实现、调用关系和测试。重点检查回归、并发、数据一致性、权限与异常处理。
+      仅报告有明确代码依据的问题，不将个人代码风格偏好作为阻塞项。

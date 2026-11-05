@@ -1,0 +1,90 @@
+name: flowdeck
+services:
+  prepare-data:
+    image: flowdeck:local
+    user: "0:0"
+    restart: "no"
+    environment:
+      HOST_DATA_ROOT: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+      WORKFLOW_UID: ${WORKFLOW_UID:-1000}
+      WORKFLOW_GID: ${WORKFLOW_GID:-1000}
+    volumes:
+      - type: bind
+        source: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        target: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        bind:
+          create_host_path: false
+    command: [python, /app/scripts/prepare_data_root.py]
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flowdeck
+      POSTGRES_DB: flowdeck
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      PGDATA: /var/lib/postgresql/data/postgres
+    volumes:
+      - type: bind
+        source: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U flowdeck -d flowdeck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      prepare-data:
+        condition: service_completed_successfully
+  api:
+    build: .
+    image: flowdeck:local
+    restart: unless-stopped
+    user: "${WORKFLOW_UID:-1000}:${WORKFLOW_GID:-1000}"
+    env_file: .env
+    environment: &environment
+      APP_MODE: live
+      DATABASE_URL: postgresql+psycopg://flowdeck:${POSTGRES_PASSWORD}@db:5432/flowdeck
+      DATA_ROOT: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+      WORKSPACE_HOST_ROOT: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+      CONFIG_PATH: /app/config/projects.yml
+      COPILOT_SKIP_CLI_DOWNLOAD: "1"
+    ports:
+      - "${DASHBOARD_BIND:-127.0.0.1}:${DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        target: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        bind:
+          create_host_path: false
+      - ./config:/app/config:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+  worker:
+    image: flowdeck:local
+    restart: unless-stopped
+    user: "${WORKFLOW_UID:-1000}:${WORKFLOW_GID:-1000}"
+    command: [python, -m, backend.worker]
+    env_file: .env
+    environment: *environment
+    volumes:
+      - type: bind
+        source: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        target: ${HOST_DATA_ROOT:?Set HOST_DATA_ROOT in .env}
+        bind:
+          create_host_path: false
+      - ./config:/app/config:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      api:
+        condition: service_healthy
